@@ -1,0 +1,4 @@
+body { font-family: Arial, sans-serif; }
+form { width: 300px; margin: auto; padding: 20px; border: 1px solid #ccc; }
+input, button { display: block; width: 100%; margin-bottom: 10px; }
+button { background: #007bff; color: white; border: none; padding: 10px; }
