@@ -18,53 +18,42 @@ if (!isset($_SESSION["user_id"]) || ($_SESSION["user_role"] !== "librarian" && $
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Librarian Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            text-align: center;
+            background-color: #f8f9fa;
         }
 
         .navbar {
-            background: #333;
+            background: #007bff;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
             color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
-        .navbar h2 {
-            margin: 0;
+        .nav-link {
+            color: white !important;
+            transition: 0.3s;
         }
 
-        .navbar .links {
-            display: flex;
-            gap: 20px;
-            padding-right: 20px;
+        .nav-link:hover {
+            color: #ddd !important;
         }
 
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            background: #555;
-        }
-
-        .navbar a:hover {
-            background: #777;
-        }
-
-        .container {
+        .dashboard-container {
+            max-width: 800px;
             margin: 40px auto;
-            width: 80%;
+        }
+
+        .dashboard-card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px #ccc;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
 
         .dashboard-menu {
@@ -77,18 +66,24 @@ if (!isset($_SESSION["user_id"]) || ($_SESSION["user_role"] !== "librarian" && $
         }
 
         .dashboard-menu a {
-            display: inline-block;
-            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 18px;
             color: white;
             background: #007bff;
             padding: 12px 20px;
             border-radius: 5px;
             transition: 0.3s;
+            text-decoration: none;
         }
 
         .dashboard-menu a:hover {
             background: #0056b3;
+        }
+
+        .dashboard-menu i {
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -96,22 +91,28 @@ if (!isset($_SESSION["user_id"]) || ($_SESSION["user_role"] !== "librarian" && $
 <body>
 
     <!-- Navigation Bar -->
-    <div class="navbar">
-        <h2>Librarian Dashboard</h2>
-        <div class="links">
-            <a href="logout.php">Logout</a>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand">📖 Librarian Dashboard</a>
+            <div class="ms-auto">
+                <a href="logout.php" class="btn btn-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="container dashboard-container">
+        <div class="dashboard-card">
+            <h2>Welcome, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!</h2>
+            <ul class="dashboard-menu">
+                <li><a href="books.php"><i class="fas fa-book"></i> Manage Books</a></li>
+                <li><a href="userList.php"><i class="fas fa-users"></i> View Users</a></li>
+                <li><a href="reservations.php"><i class="fas fa-calendar-alt"></i> Manage Reservations</a></li>
+            </ul>
         </div>
     </div>
 
-    <div class="container">
-        <h2>Welcome, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!</h2>
-        <ul class="dashboard-menu">
-            <li><a href="books.php">📚 Manage Books</a></li>
-            <li><a href="users.php">👥 View Users</a></li>
-            <li><a href="reservations.php">📅 Manage Reservations</a></li>
-        </ul>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

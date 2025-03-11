@@ -1,7 +1,7 @@
 <?php
 $host = "localhost";
-$user = "root";  // Change for production
-$pass = "";      // Change for production
+$user = "root";
+$pass = "";
 $db   = "auth_system";
 
 $conn = new mysqli($host, $user, $pass, $db);
