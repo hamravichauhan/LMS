@@ -2,10 +2,9 @@
 session_start();
 include "../db/config.php";
 
-if (isset($_SESSION["user_id"])) {
-    $redirect = $_SESSION["user_role"] === "admin" ? "../adminDashboard/admin_dashboard.php"
-        : ($_SESSION["user_role"] === "librarian" ? "../libraianDashboard/index.php" : "../studentDashboard/student_dashboard.php");
-    header("Location: $redirect");
+// Redirect if not logged in or not an admin
+if (!isset($_SESSION["user_id"]) || $_SESSION["user_role"] !== "admin") {
+    header("Location: ../login.php");
     exit();
 }
 
@@ -13,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
     $name = trim(htmlspecialchars($_POST["name"]));
     $email = trim(htmlspecialchars($_POST["email"]));
     $password = $_POST["password"];
-    $role = "student"; // Default role
+    $role = "student"; // Only students can be registered  
 
     if (empty($name) || empty($email) || empty($password)) {
         echo json_encode(["status" => "error", "message" => "All fields are required."]);
@@ -25,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
         exit();
     }
 
-    // Check if name or email already exists
+    // Check if email already exists
     $check_stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
     $check_stmt->bind_param("s", $email);
     $check_stmt->execute();
@@ -38,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
 
     $check_stmt->close();
 
-    // Password validation (8+ characters, uppercase, lowercase, number, special character)
+    // Password validation
     if (
         strlen($password) < 8 || !preg_match("/[A-Z]/", $password) ||
         !preg_match("/[a-z]/", $password) || !preg_match("/[0-9]/", $password) ||
@@ -54,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
     $stmt->bind_param("ssss", $name, $email, $hashed_password, $role);
 
     if ($stmt->execute()) {
-        echo json_encode(["status" => "success", "message" => "Registration successful! Redirecting..."]);
+        echo json_encode(["status" => "success", "message" => "Student registered successfully!"]);
     } else {
         echo json_encode(["status" => "error", "message" => "Registration failed. Please try again."]);
     }
@@ -71,90 +70,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #1e1e1e;
-            font-family: Arial, sans-serif;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-            text-align: center;
-            width: 320px;
-        }
-
-        h2 {
-            color: #fff;
-            margin-bottom: 15px;
-        }
-
-        .message {
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .success {
-            color: #00ff00;
-        }
-
-        .error {
-            color: #ff4d4d;
-        }
-
-        input,
-        button {
-            width: 90%;
-            padding: 10px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 5px;
-        }
-
-        input {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-            outline: none;
-        }
-
-        input:focus {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        button {
-            background: #ffcc00;
-            font-size: 16px;
-            font-weight: bold;
-            color: #121212;
-            margin-top: 10px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background: #e6b800;
-        }
-
-        #loginLink {
-            color: #fff;
-            text-decoration: none;
-            font-size: 14px;
-            margin-top: 10px;
-            display: block;
-        }
-    </style>
+    <title>Admin - Register Student</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         function registerUser(event) {
             event.preventDefault();
@@ -168,28 +85,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["ajax"])) {
                 .then(data => {
                     let messageDiv = document.getElementById("message");
                     messageDiv.innerHTML = data.message;
-                    messageDiv.className = "message " + (data.status === "success" ? "success" : "error");
-
-                    if (data.status === "success") {
-                        setTimeout(() => window.location.href = "login.php", 2000);
-                    }
+                    messageDiv.className = "text-sm font-bold p-2 rounded " + (data.status === "success" ? "text-green-500" : "text-red-500");
                 })
                 .catch(error => console.error("Error:", error));
         }
     </script>
 </head>
 
-<body>
-    <div class="container">
-        <h2>Register</h2>
-        <div id="message"></div>
-        <form id="registerForm" onsubmit="registerUser(event)">
+<body class="flex items-center justify-center h-screen bg-gray-900 text-white">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-2xl font-semibold text-center mb-4">Register Student</h2>
+        <div id="message" class="text-center mb-3"></div>
+        <form id="registerForm" onsubmit="registerUser(event)" class="space-y-4">
             <input type="hidden" name="ajax" value="1">
-            <input type="text" name="name" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-            <a id="loginLink" href="login.php">Already have an account? Login</a>
+            <input type="text" name="name" placeholder="Username" required class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            <input type="email" name="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            <input type="password" name="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            <button type="submit" class="w-full bg-yellow-400 text-gray-900 font-bold py-2 rounded hover:bg-yellow-500 transition">Register</button>
+            <a href="../adminDashboard/admin_dashboard.php" class="block text-center text-yellow-400 mt-2">Back to Dashboard</a>
         </form>
     </div>
 </body>

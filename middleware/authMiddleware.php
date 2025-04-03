@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Redirect if not logged in
 if (!isset($_SESSION["user_id"])) {
-    header("Location: login.php");
+    header("Location: ../auth/login.php"); // Update this path
     exit();
 }
 
@@ -20,8 +20,7 @@ switch ($current_page) {
         }
         break;
 
-    case "./libraianDashboard/index.php":
-        // Admins can access the librarian dashboard
+    case "index.php": // Librarian Dashboard
         if ($user_role !== "librarian" && $user_role !== "admin") {
             header("Location: student_dashboard.php");
             exit();
@@ -29,16 +28,22 @@ switch ($current_page) {
         break;
 
     case "student_dashboard.php":
-        // Admins can access the student dashboard
         if ($user_role !== "student" && $user_role !== "admin") {
-            header("Location: login.php");
+            header("Location: ../auth/login.php"); // Update this path
+            exit();
+        }
+        break;
+
+    case "register.php":
+        // Ensure only admins can access register page
+        if ($user_role !== "admin") {
+            header("Location: admin_dashboard.php");
             exit();
         }
         break;
 
     case "login.php":
-    case "register.php":
-        // Prevent admin from accessing login or register pages
+        // Prevent logged-in admins from seeing login
         if ($user_role === "admin") {
             header("Location: admin_dashboard.php");
             exit();
@@ -46,7 +51,7 @@ switch ($current_page) {
         break;
 
     default:
-        // Redirect users with unknown roles to login
-        header("Location: login.php");
+        // Redirect users with unknown roles
+        header("Location: ../auth/login.php"); // Update this path
         exit();
 }
