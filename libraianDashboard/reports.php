@@ -26,7 +26,8 @@ $query = "SELECT
             r.book_returned_date AS return_date,
             r.status,
             r.late_fee,
-            r.expected_return_date
+            r.expected_return_date,
+            r.book_taken_date
           FROM reservations r
           JOIN books b ON r.book_id = b.id
           JOIN users u ON r.user_id = u.id";
@@ -69,6 +70,7 @@ $query .= " ORDER BY r.reservation_date DESC LIMIT 1000";
 
 // Execute the query
 $transactions = [];
+$total_pending_fines = 0;
 try {
     $stmt = $conn->prepare($query);
     
@@ -79,6 +81,15 @@ try {
     $stmt->execute();
     $result = $stmt->get_result();
     $transactions = $result->fetch_all(MYSQLI_ASSOC);
+    
+    // Calculate total pending fines (only for unreturned books with late fees)
+    $pending_fines_query = "SELECT SUM(late_fee) AS total_pending 
+                           FROM reservations 
+                           WHERE book_returned_date IS NULL 
+                           AND late_fee > 0";
+    $pending_result = $conn->query($pending_fines_query);
+    $total_pending_fines = $pending_result->fetch_assoc()['total_pending'] ?? 0;
+    
 } catch (Exception $e) {
     error_log("Database error: " . $e->getMessage());
     $error_message = "Failed to load transaction data. Please try again later.";
@@ -141,6 +152,10 @@ try {
             background-color: #fee2e2;
             color: #991b1b;
         }
+        .table-container {
+            max-height: calc(100vh - 400px);
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -148,22 +163,22 @@ try {
 
     <!-- Navbar -->
     <header class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                <h1 class="text-xl font-bold text-gray-900">
-                    <a href="dashboard.php" class="flex items-center">
-                        <i class="fas fa-book-open text-blue-600 mr-2"></i>
-                        Library Management System
-                    </a>
-                </h1>
-                <nav>
-                    <ul class="flex space-x-6">
-                        <li><a href="index.php" class="text-gray-600 hover:text-gray-900">Dashboard</a></li>
-                        <li><a href="books.php" class="text-gray-600 hover:text-gray-900">Books</a></li>
-                        <li><a href="logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
-                    </ul>
-                </nav>
-            </div>
-        </header>
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-gray-900">
+                <a href="dashboard.php" class="flex items-center">
+                    <i class="fas fa-book-open text-blue-600 mr-2"></i>
+                    Library Management System
+                </a>
+            </h1>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="index.php" class="text-gray-600 hover:text-gray-900">Dashboard</a></li>
+                    <li><a href="books.php" class="text-gray-600 hover:text-gray-900">Books</a></li>
+                    <li><a href="../auth/logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
 
     <!-- Reports Content -->
     <div class="container mx-auto px-4 py-8">
@@ -235,7 +250,7 @@ try {
             <?php endif; ?>
             
             <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                     <div class="flex items-center">
                         <div class="bg-blue-100 p-3 rounded-full mr-4">
@@ -273,9 +288,28 @@ try {
                         <div>
                             <p class="text-sm text-gray-600">Pending Fines</p>
                             <p class="text-xl font-bold">
-                                ₹<?php 
-                                    $pending_fines = array_sum(array_column($transactions, 'late_fee'));
-                                    echo number_format($pending_fines, 2);
+                                ₹<?php echo number_format($total_pending_fines, 2); ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <div class="flex items-center">
+                        <div class="bg-purple-100 p-3 rounded-full mr-4">
+                            <i class="fas fa-clock text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Overdue Books</p>
+                            <p class="text-xl font-bold">
+                                <?php 
+                                    $overdue = array_filter($transactions, fn($t) => 
+                                        $t['status'] === 'completed' && 
+                                        !$t['return_date'] && 
+                                        $t['expected_return_date'] && 
+                                        strtotime($t['expected_return_date']) < time()
+                                    );
+                                    echo number_format(count($overdue));
                                 ?>
                             </p>
                         </div>
@@ -284,9 +318,9 @@ try {
             </div>
             
             <!-- Transactions Table -->
-            <div class="overflow-x-auto">
+            <div class="table-container">
                 <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-gray-50 sticky top-0">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book Title</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrower</th>
@@ -320,10 +354,13 @@ try {
                                 <?php echo htmlspecialchars($transaction['user_name']); ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <?php echo date('M j, Y', strtotime($transaction['reservation_date'])); ?>
+                                <?php echo $transaction['book_taken_date'] ? date('M j, Y', strtotime($transaction['book_taken_date'])) : '-'; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <?php echo $transaction['expected_return_date'] ? date('M j, Y', strtotime($transaction['expected_return_date'])) : '-'; ?>
+                                <?php if ($is_overdue): ?>
+                                    <span class="ml-1 text-xs text-red-500">(Overdue)</span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <?php echo $transaction['return_date'] ? date('M j, Y', strtotime($transaction['return_date'])) : '-'; ?>
@@ -352,8 +389,6 @@ try {
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Pagination would go here in a real implementation -->
         </div>
     </div>
 
@@ -365,5 +400,4 @@ try {
     </footer>
 
 </body>
-
 </html>

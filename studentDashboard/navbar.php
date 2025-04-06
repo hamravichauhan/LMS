@@ -23,11 +23,11 @@
                     Books
                 </a>
             </li>
-            <li>
+            <!-- <li>
                 <a href="issued_books.php" class="relative after:block after:h-[2px] after:w-full after:bg-white after:scale-x-0 after:transition-transform after:duration-300 after:origin-center hover:after:scale-x-100">
                     My Issued Books
                 </a>
-            </li>
+            </li> -->
             <li>
                 <a href="reservations.php" class="relative after:block after:h-[2px] after:w-full after:bg-white after:scale-x-0 after:transition-transform after:duration-300 after:origin-center hover:after:scale-x-100">
                     Reservations

@@ -30,30 +30,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $formData['book_summary'] = trim($_POST["book_summary"] ?? '');
     $imagePath = "";
 
-    // Validate inputs
+    // Validate inputs with comprehensive checks
     if (empty($formData['title'])) {
         $errorMessages[] = "Book title is required";
+    } elseif (strlen($formData['title']) > 255) {
+        $errorMessages[] = "Book title must be less than 255 characters";
     }
+
     if (empty($formData['author'])) {
         $errorMessages[] = "Author name is required";
+    } elseif (strlen($formData['author']) > 100) {
+        $errorMessages[] = "Author name must be less than 100 characters";
+    } elseif (!preg_match("/^[a-zA-Z\s\-\.]+$/", $formData['author'])) {
+        $errorMessages[] = "Author name can only contain letters, spaces, hyphens, and periods";
     }
+
     if (empty($formData['isbn'])) {
         $errorMessages[] = "ISBN is required";
+    } elseif (!preg_match("/^(97(8|9))?\d{9}(\d|X)$/", $formData['isbn'])) {
+        $errorMessages[] = "Please enter a valid ISBN (10 or 13 digits)";
     }
+
     if ($formData['copies'] < 1) {
         $errorMessages[] = "Number of copies must be at least 1";
+    } elseif ($formData['copies'] > 1000) {
+        $errorMessages[] = "Number of copies cannot exceed 1000";
     }
+
     if (empty($formData['genre'])) {
         $errorMessages[] = "Genre is required";
+    } elseif (strlen($formData['genre']) > 50) {
+        $errorMessages[] = "Genre must be less than 50 characters";
     }
+
     if (empty($formData['publisher'])) {
         $errorMessages[] = "Publisher is required";
+    } elseif (strlen($formData['publisher']) > 100) {
+        $errorMessages[] = "Publisher name must be less than 100 characters";
     }
+
     if (empty($formData['publication_year']) || 
         !is_numeric($formData['publication_year']) || 
         $formData['publication_year'] < 1000 || 
         $formData['publication_year'] > date('Y')) {
         $errorMessages[] = "Enter a valid publication year (1000-".date('Y').")";
+    }
+
+    if (strlen($formData['edition']) > 50) {
+        $errorMessages[] = "Edition must be less than 50 characters";
+    }
+
+    if (strlen($formData['book_summary']) > 500) {
+        $errorMessages[] = "Book summary must be less than 500 characters";
     }
 
     // Handle file upload if present
@@ -66,14 +94,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $allowedTypes = ["jpg", "jpeg", "png", "webp"];
         $maxFileSize = 2 * 1024 * 1024; // 2MB
         
+        // Check if file is an actual image
+        $check = getimagesize($_FILES["image"]["tmp_name"]);
+        if ($check === false) {
+            $errorMessages[] = "File is not an image";
+        }
+        
+        // Check file type
         if (!in_array($fileType, $allowedTypes)) {
             $errorMessages[] = "Only JPG, JPEG, PNG, and WEBP files are allowed";
-        } elseif ($_FILES["image"]["size"] > $maxFileSize) {
+        } 
+        // Check file size
+        elseif ($_FILES["image"]["size"] > $maxFileSize) {
             $errorMessages[] = "Image size must be less than 2MB";
-        } elseif (move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
-            $imagePath = $fileName; // Store relative path
-        } else {
+        } 
+        // Try to upload file
+        elseif (!move_uploaded_file($_FILES["image"]["tmp_name"], $targetFilePath)) {
             $errorMessages[] = "Sorry, there was an error uploading your file";
+        } else {
+            $imagePath = $fileName; // Store relative path
         }
     }
 
@@ -128,96 +167,65 @@ $conn->close();
     <title>Add a Book | Library Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-    * {
-        box-sizing: border-box;
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-    }
-
-    .container {
-        max-width: 500px;
-        margin: 50px auto;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        background: #f9f9f9;
-    }
-
-    .heading {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
-    }
-
-    .form-group input,
-    .form-group select {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-
-    .file-upload-container {
-        display: flex;
-        align-items: center;
-    }
-
-    .file-upload-label {
-        display: flex;
-        align-items: center;
-        padding: 8px 12px;
-        background: #eee;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .file-upload-label i {
-        margin-right: 8px;
-    }
-
-    .hidden {
-        display: none;
-    }
-
-    .image-preview {
-        max-height: 100px;
-        margin-left: 15px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-
-    .file-info {
-        font-size: 12px;
-        color: #777;
-    }
-
-    .submit-btn {
-        width: 100%;
-        padding: 10px;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-
-    .submit-btn:hover {
-        background: #0056b3;
-    }
-</style>
-
+        .form-group {
+            @apply mb-6;
+        }
+        .form-label {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        .input-group {
+            @apply relative rounded-md shadow-sm;
+        }
+        .input-icon {
+            @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400;
+        }
+        .form-input {
+            @apply block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
+        }
+        .form-textarea {
+            @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
+        }
+        .input-hint {
+            @apply text-xs text-gray-500 mt-1;
+        }
+        .file-upload-btn {
+            @apply inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer;
+        }
+        .file-upload-input {
+            @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer;
+        }
+        .primary-btn {
+            @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+        }
+        .secondary-btn {
+            @apply inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+        }
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
+        .is-invalid + .input-hint {
+            color: #dc3545;
+        }
+        .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.875em;
+            color: #dc3545;
+        }
+        .is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Header -->
@@ -231,9 +239,9 @@ $conn->close();
             </h1>
             <nav>
                 <ul class="flex space-x-6">
-                    <li><a href="index.php" class="text-gray-600 hover:text-gray-900">Dashboard</a></li>
+                    <li><a href="dashboard.php" class="text-gray-600 hover:text-gray-900">Dashboard</a></li>
                     <li><a href="books.php" class="text-gray-600 hover:text-gray-900">Books</a></li>
-                    <li><a href="logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
+                    <li><a href="../logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
                 </ul>
             </nav>
         </div>
@@ -294,277 +302,414 @@ $conn->close();
             <?php endif; ?>
 
             <!-- Book Form -->
-            <!-- Book Form -->
-<form method="post" enctype="multipart/form-data" class="px-6 py-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Left Column -->
-        <div class="space-y-6">
-            <!-- Book Title -->
-            <div class="form-group">
-                <label for="title" class="form-label">Book Title <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-heading"></i>
-                    </span>
-                    <input type="text" name="title" id="title" value="<?= htmlspecialchars($formData['title'] ?? '') ?>" 
-                           class="form-input" 
-                           placeholder="The Great Gatsby" required>
-                </div>
-            </div>
+            <form method="post" enctype="multipart/form-data" class="px-6 py-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Left Column -->
+                    <div class="space-y-6">
+                        <!-- Book Title -->
+                        <div class="form-group">
+                            <label for="title" class="form-label">Book Title <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-heading"></i>
+                                </span>
+                                <input type="text" name="title" id="title" value="<?= htmlspecialchars($formData['title'] ?? '') ?>" 
+                                       class="form-input" 
+                                       placeholder="The Great Gatsby" required>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please provide a valid title (max 255 characters)
+                            </div>
+                        </div>
 
-            <!-- Author -->
-            <div class="form-group">
-                <label for="author" class="form-label">Author <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-user-edit"></i>
-                    </span>
-                    <input type="text" name="author" id="author" value="<?= htmlspecialchars($formData['author'] ?? '') ?>" 
-                           class="form-input" 
-                           placeholder="F. Scott Fitzgerald" required>
-                </div>
-            </div>
+                        <!-- Author -->
+                        <div class="form-group">
+                            <label for="author" class="form-label">Author <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-user-edit"></i>
+                                </span>
+                                <input type="text" name="author" id="author" value="<?= htmlspecialchars($formData['author'] ?? '') ?>" 
+                                       class="form-input" 
+                                       placeholder="F. Scott Fitzgerald" required>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please provide a valid author name (letters, spaces, hyphens only)
+                            </div>
+                        </div>
 
-            <!-- ISBN -->
-            <div class="form-group">
-                <label for="isbn" class="form-label">ISBN <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-barcode"></i>
-                    </span>
-                    <input type="text" name="isbn" id="isbn" value="<?= htmlspecialchars($formData['isbn'] ?? '') ?>" 
-                           class="form-input" 
-                           placeholder="978-3-16-148410-0" required>
-                    <span class="input-hint">13-digit format</span>
-                </div>
-            </div>
+                        <!-- ISBN -->
+                        <div class="form-group">
+                            <label for="isbn" class="form-label">ISBN <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-barcode"></i>
+                                </span>
+                                <input type="text" name="isbn" id="isbn" value="<?= htmlspecialchars($formData['isbn'] ?? '') ?>" 
+                                       class="form-input" 
+                                       placeholder="978-3-16-148410-0" required>
+                                <span class="input-hint">13-digit format</span>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please provide a valid ISBN (10 or 13 digits)
+                            </div>
+                        </div>
 
-            <!-- Publisher -->
-            <div class="form-group">
-                <label for="publisher" class="form-label">Publisher <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-building"></i>
-                    </span>
-                    <input type="text" name="publisher" id="publisher" value="<?= htmlspecialchars($formData['publisher'] ?? '') ?>" 
-                           class="form-input" 
-                           placeholder="Penguin Books" required>
+                        <!-- Publisher -->
+                        <div class="form-group">
+                            <label for="publisher" class="form-label">Publisher <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-building"></i>
+                                </span>
+                                <input type="text" name="publisher" id="publisher" value="<?= htmlspecialchars($formData['publisher'] ?? '') ?>" 
+                                       class="form-input" 
+                                       placeholder="Penguin Books" required>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please provide a publisher name
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="space-y-6">
+                        <!-- Genre -->
+                        <div class="form-group">
+                            <label for="genre" class="form-label">Genre <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-tags"></i>
+                                </span>
+                                <select name="genre" id="genre" class="form-input" required>
+                                    <option value="" disabled selected>Select a genre</option>
+                                    <option value="Fiction" <?= ($formData['genre'] ?? '') == 'Fiction' ? 'selected' : '' ?>>Fiction</option>
+                                    <option value="Non-Fiction" <?= ($formData['genre'] ?? '') == 'Non-Fiction' ? 'selected' : '' ?>>Non-Fiction</option>
+                                    <option value="Science Fiction" <?= ($formData['genre'] ?? '') == 'Science Fiction' ? 'selected' : '' ?>>Science Fiction</option>
+                                    <option value="Biography" <?= ($formData['genre'] ?? '') == 'Biography' ? 'selected' : '' ?>>Biography</option>
+                                    <option value="History" <?= ($formData['genre'] ?? '') == 'History' ? 'selected' : '' ?>>History</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please select a genre
+                            </div>
+                        </div>
+
+                        <!-- Year of Publication -->
+                        <div class="form-group">
+                            <label for="publication_year" class="form-label">Publication Year <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </span>
+                                <input type="text" 
+                                       name="publication_year" 
+                                       id="publication_year" 
+                                       value="<?= htmlspecialchars($formData['publication_year'] ?? '') ?>" 
+                                       class="form-input year-picker" 
+                                       placeholder="Select year"
+                                       required
+                                       readonly>
+                                <span class="input-hint">Click to select year</span>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please select a valid year (1000-<?= date('Y') ?>)
+                            </div>
+                        </div>
+
+                        <!-- Number of Copies -->
+                        <div class="form-group">
+                            <label for="copies" class="form-label">Copies Available <span class="text-red-500">*</span></label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-copy"></i>
+                                </span>
+                                <input type="number" name="copies" id="copies" value="<?= htmlspecialchars($formData['copies'] ?? 1) ?>" 
+                                       min="1" max="1000" 
+                                       class="form-input" 
+                                       placeholder="5" required>
+                                <span class="input-hint">Minimum 1</span>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please enter a number between 1 and 1000
+                            </div>
+                        </div>
+
+                        <!-- Edition -->
+                        <div class="form-group">
+                            <label for="edition" class="form-label">Edition</label>
+                            <div class="input-group">
+                                <span class="input-icon">
+                                    <i class="fas fa-bookmark"></i>
+                                </span>
+                                <input type="text" name="edition" id="edition" value="<?= htmlspecialchars($formData['edition'] ?? '') ?>" 
+                                       class="form-input" 
+                                       placeholder="First Edition">
+                            </div>
+                            <div class="invalid-feedback">
+                                Edition must be less than 50 characters
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Book Cover Image -->
+                <div class="form-group mt-8">
+                    <label class="form-label">Book Cover</label>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div class="relative">
+                            <label class="file-upload-btn">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i>
+                                <span id="file-name">Choose cover image...</span>
+                                <input type="file" name="image" id="image" class="file-upload-input" accept="image/*">
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">JPG, PNG, or WEBP (Max 2MB)</p>
+                        </div>
+                        <div id="image-preview-container" class="hidden">
+                            <img id="image-preview" class="h-32 rounded-lg border-2 border-dashed border-gray-300 object-cover">
+                            <button type="button" id="remove-image" class="text-red-500 text-xs mt-1 flex items-center">
+                                <i class="fas fa-times mr-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book Summary -->
+                <div class="form-group mt-6">
+                    <label for="book_summary" class="form-label">Book Summary</label>
+                    <div class="relative">
+                        <textarea name="book_summary" id="book_summary" rows="5" 
+                                  class="form-textarea"
+                                  placeholder="Enter a brief description of the book's content and themes"><?= htmlspecialchars($formData['book_summary'] ?? '') ?></textarea>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-xs text-gray-500">Max 500 characters</span>
+                            <span id="char-count" class="text-xs font-medium">0/500</span>
+                        </div>
+                    </div>
+                    <div class="invalid-feedback">
+                        Summary must be less than 500 characters
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-10">
+                    <a href="books.php" class="secondary-btn">
+                        <i class="fas fa-times mr-2"></i> Cancel
+                    </a>
+                    <button type="submit" class="primary-btn">
+                        <i class="fas fa-plus-circle mr-2"></i> Add Book
+                    </button>
+                </div>
+            </form>
         </div>
+    </main>
 
-        <!-- Right Column -->
-        <div class="space-y-6">
-            <!-- Genre -->
-            <div class="form-group">
-                <label for="genre" class="form-label">Genre <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-tags"></i>
-                    </span>
-                    <select name="genre" id="genre" class="form-input" required>
-                        <option value="" disabled selected>Select a genre</option>
-                        <option value="Fiction" <?= ($formData['genre'] ?? '') == 'Fiction' ? 'selected' : '' ?>>Fiction</option>
-                        <option value="Non-Fiction" <?= ($formData['genre'] ?? '') == 'Non-Fiction' ? 'selected' : '' ?>>Non-Fiction</option>
-                        <option value="Science Fiction" <?= ($formData['genre'] ?? '') == 'Science Fiction' ? 'selected' : '' ?>>Science Fiction</option>
-                        <option value="Biography" <?= ($formData['genre'] ?? '') == 'Biography' ? 'selected' : '' ?>>Biography</option>
-                        <option value="History" <?= ($formData['genre'] ?? '') == 'History' ? 'selected' : '' ?>>History</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // Initialize year picker
+        flatpickr("#publication_year", {
+            dateFormat: "Y",
+            minDate: "1000",
+            maxDate: new Date().getFullYear().toString(),
+            defaultDate: "<?= date('Y') ?>",
+            static: true
+        });
 
-            <!-- Year of Publication -->
-            <div class="form-group">
-    <label for="publication_year" class="form-label">Publication Year <span class="text-red-500">*</span></label>
-    <div class="input-group">
-        <span class="input-icon">
-            <i class="fas fa-calendar-alt"></i>
-        </span>
-        <input type="text" 
-               name="publication_year" 
-               id="publication_year" 
-               value="<?= htmlspecialchars($formData['publication_year'] ?? '') ?>" 
-               class="form-input year-picker" 
-               placeholder="Select year"
-               required
-               readonly>
-        <span class="input-hint">Click to select year</span>
-    </div>
-</div>
-
-            <!-- Number of Copies -->
-            <div class="form-group">
-                <label for="copies" class="form-label">Copies Available <span class="text-red-500">*</span></label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-copy"></i>
-                    </span>
-                    <input type="number" name="copies" id="copies" value="<?= htmlspecialchars($formData['copies'] ?? 1) ?>" 
-                           min="1" max="1000" 
-                           class="form-input" 
-                           placeholder="5" required>
-                    <span class="input-hint">Minimum 1</span>
-                </div>
-            </div>
-
-            <!-- Edition -->
-            <div class="form-group">
-                <label for="edition" class="form-label">Edition</label>
-                <div class="input-group">
-                    <span class="input-icon">
-                        <i class="fas fa-bookmark"></i>
-                    </span>
-                    <input type="text" name="edition" id="edition" value="<?= htmlspecialchars($formData['edition'] ?? '') ?>" 
-                           class="form-input" 
-                           placeholder="First Edition">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Book Cover Image -->
-    <div class="form-group mt-8">
-        <label class="form-label">Book Cover</label>
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div class="relative">
-                <label class="file-upload-btn">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i>
-                    <span id="file-name">Choose cover image...</span>
-                    <input type="file" name="image" id="image" class="file-upload-input" accept="image/*">
-                </label>
-                <p class="text-xs text-gray-500 mt-1">JPG, PNG, or WEBP (Max 2MB)</p>
-            </div>
-            <div id="image-preview-container" class="hidden">
-                <img id="image-preview" class="h-32 rounded-lg border-2 border-dashed border-gray-300 object-cover">
-                <button type="button" id="remove-image" class="text-red-500 text-xs mt-1 flex items-center">
-                    <i class="fas fa-times mr-1"></i> Remove
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Book Summary -->
-    <div class="form-group mt-6">
-        <label for="book_summary" class="form-label">Book Summary</label>
-        <div class="relative">
-            <textarea name="book_summary" id="book_summary" rows="5" 
-                      class="form-textarea"
-                      placeholder="Enter a brief description of the book's content and themes"><?= htmlspecialchars($formData['book_summary'] ?? '') ?></textarea>
-            <div class="flex justify-between items-center mt-1">
-                <span class="text-xs text-gray-500">Max 500 characters</span>
-                <span id="char-count" class="text-xs font-medium">0/500</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Form Actions -->
-    <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-10">
-        <a href="books.php" class="secondary-btn">
-            <i class="fas fa-times mr-2"></i> Cancel
-        </a>
-        <button type="submit" class="primary-btn">
-            <i class="fas fa-plus-circle mr-2"></i> Add Book
-        </button>
-    </div>
-</form>
-
-<style>
-    .form-group {
-        @apply mb-6;
-    }
-    .form-label {
-        @apply block text-sm font-medium text-gray-700 mb-1;
-    }
-    .input-group {
-        @apply relative rounded-md shadow-sm;
-    }
-    .input-icon {
-        @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400;
-    }
-    .form-input {
-        @apply block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
-    }
-    .form-textarea {
-        @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
-    }
-    .input-hint {
-        @apply text-xs text-gray-500 mt-1;
-    }
-    .file-upload-btn {
-        @apply inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer;
-    }
-    .file-upload-input {
-        @apply absolute inset-0 w-full h-full opacity-0 cursor-pointer;
-    }
-    .primary-btn {
-        @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
-    }
-    .secondary-btn {
-        @apply inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
-    }
-</style>
-
-<!-- Include Flatpickr for year picker -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<script>
-  // Initialize year picker
-flatpickr("#publication_year", {
-    dateFormat: "Y",
-    minDate: "1000",
-    maxDate: new Date().getFullYear().toString(),
-    defaultDate: "<?= date('Y') ?>",
-    static: false // Change to false if you want the calendar to appear on click
-});
-
-    // Image preview functionality
-    document.getElementById('image').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('image-preview');
-        const container = document.getElementById('image-preview-container');
-        const fileName = document.getElementById('file-name');
-        
-        if (file) {
-            fileName.textContent = file.name;
-            container.classList.remove('hidden');
+        // Image preview functionality
+        document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('image-preview');
+            const container = document.getElementById('image-preview-container');
+            const fileName = document.getElementById('file-name');
             
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                preview.src = event.target.result;
+            if (file) {
+                fileName.textContent = file.name;
+                container.classList.remove('hidden');
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    preview.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
             }
-            reader.readAsDataURL(file);
-        }
-    });
+        });
 
-    // Remove image
-    document.getElementById('remove-image').addEventListener('click', function() {
-        document.getElementById('image').value = '';
-        document.getElementById('image-preview-container').classList.add('hidden');
-        document.getElementById('file-name').textContent = 'Choose cover image...';
-    });
+        // Remove image
+        document.getElementById('remove-image').addEventListener('click', function() {
+            document.getElementById('image').value = '';
+            document.getElementById('image-preview-container').classList.add('hidden');
+            document.getElementById('file-name').textContent = 'Choose cover image...';
+        });
 
-    // Character counter
-    document.getElementById('book_summary').addEventListener('input', function() {
-        const count = this.value.length;
-        const counter = document.getElementById('char-count');
-        counter.textContent = `${count}/500`;
+        // Character counter
+        document.getElementById('book_summary').addEventListener('input', function() {
+            const count = this.value.length;
+            const counter = document.getElementById('char-count');
+            counter.textContent = `${count}/500`;
+            
+            if (count > 500) {
+                this.classList.add('is-invalid');
+                counter.classList.add('text-red-600');
+                counter.classList.remove('text-gray-500');
+            } else if (count > 450) {
+                this.classList.remove('is-invalid');
+                counter.classList.add('text-yellow-600');
+                counter.classList.remove('text-gray-500');
+            } else {
+                this.classList.remove('is-invalid');
+                counter.classList.remove('text-yellow-600', 'text-red-600');
+                counter.classList.add('text-gray-500');
+            }
+        });
+
+        // Form validation on submit
+        document.querySelector('form').addEventListener('submit', function(e) {
+            let isValid = true;
+            const title = document.getElementById('title');
+            const author = document.getElementById('author');
+            const isbn = document.getElementById('isbn');
+            const copies = document.getElementById('copies');
+            const genre = document.getElementById('genre');
+            const publisher = document.getElementById('publisher');
+            const publicationYear = document.getElementById('publication_year');
+            const bookSummary = document.getElementById('book_summary');
+            
+            // Clear previous error highlights
+            document.querySelectorAll('.is-invalid').forEach(el => {
+                el.classList.remove('is-invalid');
+            });
+            
+            // Validate title
+            if (title.value.trim() === '') {
+                title.classList.add('is-invalid');
+                isValid = false;
+            } else if (title.value.length > 255) {
+                title.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate author
+            if (author.value.trim() === '') {
+                author.classList.add('is-invalid');
+                isValid = false;
+            } else if (!/^[a-zA-Z\s\-\.]+$/.test(author.value)) {
+                author.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate ISBN
+            if (isbn.value.trim() === '') {
+                isbn.classList.add('is-invalid');
+                isValid = false;
+            } else if (!/^(97(8|9))?\d{9}(\d|X)$/.test(isbn.value)) {
+                isbn.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate copies
+            if (copies.value < 1 || copies.value > 1000) {
+                copies.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate genre
+            if (genre.value === '') {
+                genre.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate publisher
+            if (publisher.value.trim() === '') {
+                publisher.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate publication year
+            if (publicationYear.value.trim() === '' || 
+                isNaN(publicationYear.value) || 
+                publicationYear.value < 1000 || 
+                publicationYear.value > new Date().getFullYear()) {
+                publicationYear.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            // Validate book summary length
+            if (bookSummary.value.length > 500) {
+                bookSummary.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                // Scroll to first error
+                const firstError = document.querySelector('.is-invalid');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
         
-        if (count > 450) {
-            counter.classList.add('text-yellow-600');
-            counter.classList.remove('text-gray-500');
+        // Real-time validation for fields
+        document.getElementById('title').addEventListener('input', function() {
+            if (this.value.length > 255) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        document.getElementById('author').addEventListener('input', function() {
+            if (!/^[a-zA-Z\s\-\.]+$/.test(this.value)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        document.getElementById('isbn').addEventListener('input', function () {
+        const value = this.value.replace(/[-\s]/g, ''); // Remove dashes/spaces
+        const errorDiv = document.getElementById('isbn-error');
+
+        if (/^(97(8|9))?\d{9}(\d|X)$/.test(value)) {
+            let isValid = false;
+
+            if (value.length === 10) {
+                isValid = validateISBN10(value);
+            } else if (value.length === 13) {
+                isValid = validateISBN13(value);
+            }
+
+            if (isValid) {
+                this.classList.remove('is-invalid');
+                errorDiv.style.display = 'none';
+            } else {
+                this.classList.add('is-invalid');
+                errorDiv.style.display = 'block';
+            }
         } else {
-            counter.classList.remove('text-yellow-600');
-            counter.classList.add('text-gray-500');
+            this.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
         }
     });
 
-    // Initialize counter
-    document.addEventListener('DOMContentLoaded', function() {
-        const summary = document.getElementById('book_summary');
-        document.getElementById('char-count').textContent = `${summary.value.length}/500`;
-    });
-</script>
+    /* Simplified validation to match PHP format check only */
+    function validateISBN10() { return true; }
+    function validateISBN13() { return true; }
+        
+        document.getElementById('copies').addEventListener('input', function() {
+            if (this.value < 1 || this.value > 1000) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        // Initialize counter
+        document.addEventListener('DOMContentLoaded', function() {
+            const summary = document.getElementById('book_summary');
+            document.getElementById('char-count').textContent = `${summary.value.length}/500`;
+        });
+    </script>
 </body>
 </html>

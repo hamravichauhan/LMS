@@ -2,9 +2,11 @@
 session_start();
 include "../db/config.php";
 
-// Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    die("You must be logged in to view this page.");
+// Check if the user is logged in and has librarian/admin privileges
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] !== 'librarian' && $_SESSION['user_role'] !== 'admin')) {
+    $_SESSION['error'] = "You must be logged in as a librarian or admin to view this page.";
+    header("Location: ../auth/login.php");
+    exit();
 }
 
 // Display success or error messages
@@ -40,7 +42,7 @@ if (isset($_SESSION['error'])) {
 // Fetch all approved reservations with late fee calculation
 $approved_sql = "SELECT r.id, u.name AS user_name, b.title AS book_title, 
                 r.reservation_date, r.book_taken_date, r.expected_return_date, 
-                r.book_returned_date, r.late_fee,
+                r.book_returned_date, r.late_fee, r.status,
                 CASE 
                     WHEN r.book_returned_date IS NULL AND r.expected_return_date < CURDATE() THEN 
                         DATEDIFF(CURDATE(), r.expected_return_date) * 30
@@ -49,7 +51,8 @@ $approved_sql = "SELECT r.id, u.name AS user_name, b.title AS book_title,
                 FROM reservations r
                 JOIN users u ON r.user_id = u.id
                 JOIN books b ON r.book_id = b.id
-                WHERE r.status = 'completed'";
+                WHERE r.status = 'completed'
+                ORDER BY r.book_returned_date ASC, r.expected_return_date ASC";
 $approved_result = $conn->query($approved_sql);
 ?>
 
@@ -79,6 +82,13 @@ $approved_result = $conn->query($approved_sql);
             const modal = document.getElementById('bookTakenModal');
             if (event.target === modal) {
                 closeBookTakenModal();
+            }
+        }
+
+        // Confirm book return
+        function confirmReturn(reservationId) {
+            if (confirm('Are you sure you want to mark this book as returned?')) {
+                window.location.href = 'book_returned.php?reservation_id=' + reservationId;
             }
         }
     </script>
@@ -138,7 +148,7 @@ $approved_result = $conn->query($approved_sql);
                     <ul class="flex space-x-6">
                         <li><a href="index.php" class="text-gray-600 hover:text-gray-900">Dashboard</a></li>
                         <li><a href="reservation.php" class="text-gray-600 hover:text-gray-900">Reservations</a></li>
-                        <li><a href="logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
+                        <li><a href="../auth/logout.php" class="text-gray-600 hover:text-gray-900">Logout</a></li>
                     </ul>
                 </nav>
             </div>
@@ -222,10 +232,10 @@ $approved_result = $conn->query($approved_sql);
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="book_returned.php?reservation_id=<?= $row['id'] ?>" 
-                                               class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                            <button onclick="confirmReturn(<?= $row['id'] ?>)" 
+                                                   class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                                 <i class="fas fa-undo mr-1"></i> Mark Returned
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
@@ -324,10 +334,10 @@ $approved_result = $conn->query($approved_sql);
 
                                                 <!-- Book Returned Button -->
                                                 <?php if ($row['book_taken_date'] && !$row['book_returned_date']): ?>
-                                                    <a href="book_returned.php=<?= $row['id'] ?>" 
-                                                       class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                                    <button onclick="confirmReturn(<?= $row['id'] ?>)" 
+                                                           class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                                         <i class="fas fa-undo mr-1"></i> Mark Returned
-                                                    </a>
+                                                    </button>
                                                 <?php endif; ?>
 
                                                 <!-- View Details Button -->

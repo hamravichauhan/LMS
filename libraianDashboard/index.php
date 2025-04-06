@@ -20,13 +20,15 @@ $stats = [
     'users_count' => 0,
     'reservations_count' => 0,
     'today_reservations' => 0,
-    'librarians_count' => 0
+    'librarians_count' => 0,
+    'pending_fines' => 0,
+    'collected_fines' => 0
 ];
 
 try {
     $stats['books_count'] = $conn->query("SELECT COUNT(*) FROM books")->fetch_row()[0];
     $stats['available_books'] = $conn->query("SELECT COUNT(*) FROM books WHERE status = 'available'")->fetch_row()[0];
-    $stats['issued_books'] = $conn->query("SELECT COUNT(*) FROM books WHERE status = 'issued'")->fetch_row()[0];
+    $stats['issued_books'] = $conn->query("SELECT COUNT(*) FROM reservations WHERE book_taken_date IS NOT NULL AND book_returned_date IS NULL")->fetch_row()[0];
     $stats['users_count'] = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'student'")->fetch_row()[0];
     $stats['reservations_count'] = $conn->query("SELECT COUNT(*) FROM reservations WHERE status = 'pending'")->fetch_row()[0];
     $stats['today_reservations'] = $conn->query("SELECT COUNT(*) FROM reservations WHERE DATE(reservation_date) = CURDATE()")->fetch_row()[0];
@@ -143,35 +145,20 @@ try {
                         </div>
                     </div>
                     
-                <!-- Today's Reservations -->
-                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-                    <div class="flex items-center justify-center">
-                        <i class="fas fa-calendar-day text-yellow-600 text-2xl mr-3"></i>
-                        <div>
-                            <p class="text-gray-500 text-sm">Today's Reservations</p>
-                            <p class="text-xl font-bold"><?= number_format($stats['today_reservations']) ?></p>
+                    <!-- Today's Reservations -->
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+                        <div class="flex items-center justify-center">
+                            <i class="fas fa-calendar-day text-yellow-600 text-2xl mr-3"></i>
+                            <div>
+                                <p class="text-gray-500 text-sm">Today's Reservations</p>
+                                <p class="text-xl font-bold"><?= number_format($stats['today_reservations']) ?></p>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Unpaid Late Fees -->
-                <!-- <div class="bg-red-50 p-4 rounded-lg border border-red-100">
-                    <div class="flex items-center justify-center">
-                        <i class="fas fa-exclamation-circle text-red-600 text-2xl mr-3"></i>
-                        <div class="text-center">
-                            <p class="text-gray-700 font-medium">Unpaid Late Fees</p>
-                            <p class="text-xl font-bold text-red-600">₹<?= number_format($stats['pending_fines'] ?? 0, 2) ?></p>
-                        </div>
-                    </div>
-                </div> -->
-
-                <!-- Paid Late Fees -->
-                <!-- 1 -->
             </div>
         </div>
-    </div>
-</body>
-</html>
+
         <!-- Dashboard Menu -->
         <div class="max-w-4xl mx-auto mt-8">
             <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
@@ -299,5 +286,4 @@ try {
     </footer>
 
 </body>
-
 </html>

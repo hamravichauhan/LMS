@@ -35,9 +35,7 @@ $latest_searched = $conn->query("SELECT DISTINCT book_name FROM search_history O
     </script>
 </head>
 <body class="bg-gray-50 font-sans antialiased">
-
-    <?php include './navbar.php'; ?>
-   
+  <?php include './navbar.php'; ?>
     <!-- Hero Section -->
     <div class="relative bg-gradient-to-r from-primary to-purple-600 text-white py-16 px-4 sm:px-6 lg:px-8">
         <div class="max-w-7xl mx-auto text-center">
@@ -177,14 +175,14 @@ $latest_searched = $conn->query("SELECT DISTINCT book_name FROM search_history O
                     <h3 class="font-semibold text-lg">E-Books</h3>
                     <p class="text-gray-600 text-sm mt-1">Browse our collection</p>
                 </a>
-                <a href="#" class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow duration-300 group">
+                <a href="books.php" class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow duration-300 group">
                     <div class="w-16 h-16 bg-secondary/10 text-secondary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary group-hover:text-white transition-colors duration-300">
                         <i class="fas fa-search text-2xl"></i>
                     </div>
                     <h3 class="font-semibold text-lg">Advanced Search</h3>
                     <p class="text-gray-600 text-sm mt-1">Find specific books</p>
                 </a>
-                <a href="#" class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow duration-300 group">
+                <a href="reservations.php" class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow duration-300 group">
                     <div class="w-16 h-16 bg-purple-500/10 text-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500 group-hover:text-white transition-colors duration-300">
                         <i class="fas fa-history text-2xl"></i>
                     </div>

@@ -142,7 +142,7 @@ try {
                     <button onclick="window.print()" class="bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-gray-100 transition">
                         <i class="fas fa-print mr-2"></i> Print
                     </button>
-                    <a href="dashboard.php" class="bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-gray-100 transition">
+                    <a href="reports.php" class="bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-gray-100 transition">
                         <i class="fas fa-arrow-left mr-2"></i> Back
                     </a>
                 </div>
